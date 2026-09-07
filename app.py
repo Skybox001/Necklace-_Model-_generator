@@ -74,8 +74,8 @@ def get_generated_image(filename: str):
 
 
 @app.post("/generate")
-async def generate(request: Request, file: UploadFile = File(...)):
-    image_bytes = await file.read()
+def generate(request: Request, file: UploadFile = File(...)):
+    image_bytes = file.file.read()
     suffix = os.path.splitext(file.filename or "")[-1] or ".jpg"
     upload_filename = _save_file(image_bytes, suffix)
     upload_url = _public_url(request, upload_filename)
@@ -90,10 +90,10 @@ async def generate(request: Request, file: UploadFile = File(...)):
 
 
 @app.post("/edit")
-async def edit(request: Request, instruction: str = Form(...), file: UploadFile = File(...)):
+def edit(request: Request, instruction: str = Form(...), file: UploadFile = File(...)):
     """`file` is the previously generated image (re-uploaded by the
     frontend), `instruction` is the natural-language edit request."""
-    image_bytes = await file.read()
+    image_bytes = file.file.read()
     upload_filename = _save_file(image_bytes, ".png")
     upload_url = _public_url(request, upload_filename)
 

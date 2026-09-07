@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Necklace-on-Model Generator</title>
+<style>
+  body {
+    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    max-width: 900px;
+    margin: 40px auto;
+    padding: 0 20px;
+    color: #222;
+  }
+  h1 { font-size: 22px; }
+  p.sub { color: #666; margin-top: -8px; }
+  .row { display: flex; gap: 10px; align-items: center; margin: 16px 0; flex-wrap: wrap; }
+  input[type=text], button {
+    padding: 10px 14px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+  }
+  input[type=text] { flex: 1; min-width: 240px; }
+  button {
+    background: #222;
+    color: white;
+    border: none;
+    cursor: pointer;
+  }
+  button:hover { background: #444; }
+  button:disabled { background: #999; cursor: not-allowed; }
+  .presets button {
+    background: #eee;
+    color: #222;
+    font-size: 13px;
+    padding: 6px 10px;
+  }
+  .presets button:hover { background: #ddd; }
+  .section-title { font-weight: 600; margin-top: 28px; margin-bottom: 8px; }
+  .preview img, .result img {
+    max-width: 100%;
+    width: 360px;
+    border-radius: 10px;
+    border: 1px solid #eee;
+    display: block;
+  }
+  #status { color: #888; font-size: 13px; min-height: 18px; }
+  hr { margin: 24px 0; border: none; border-top: 1px solid #eee; }
+  .cols { display: flex; gap: 24px; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<h1>💍 Necklace-on-Model Generator</h1>
+<p class="sub">Upload a necklace photo → get a photorealistic Indian model wearing it in a saree → edit stone colors with natural language.</p>
+
+<div class="section-title">1. Upload necklace image</div>
+<div class="row">
+  <input type="file" id="fileInput" accept="image/*" />
+  <button onclick="handleGenerate()" id="generateBtn">Generate model image</button>
+</div>
+
+<div id="status"></div>
+
+<hr>
+
+<div class="cols">
+  <div>
+    <div class="section-title">Necklace (input)</div>
+    <div class="preview" id="necklacePreview"></div>
+  </div>
+  <div>
+    <div class="section-title">Generated result</div>
+    <div class="result" id="resultPreview"></div>
+  </div>
+</div>
+
+<div id="editSection" style="display:none;">
+  <hr>
+  <div class="section-title">2. Edit the generated image</div>
+  <div class="row presets">
+    <button onclick="setInstruction('Change the stones to red')">Stones → Red</button>
+    <button onclick="setInstruction('Change the stones to green')">Stones → Green</button>
+    <button onclick="setInstruction('Change the stones to blue sapphire')">Stones → Blue</button>
+    <button onclick="setInstruction('Change the metal color to silver')">Metal → Silver</button>
+  </div>
+  <div class="row">
+    <input type="text" id="instructionInput" placeholder="e.g. change the green stones to red stones" />
+    <button onclick="handleEdit()" id="editBtn">Apply edit</button>
+  </div>
+</div>
+
+<script>
+const API_BASE = "";
+let currentFile = null;       // File object of the necklace upload
+let currentResultUrl = null;  // URL of the most recent generated/edited image
+
+function setStatus(msg) {
+  document.getElementById("status").innerText = msg;
+}
+
+function setInstruction(text) {
+  document.getElementById("instructionInput").value = text;
+}
+
+document.getElementById("fileInput").addEventListener("change", (e) => {
+  currentFile = e.target.files[0];
+  if (currentFile) {
+    const url = URL.createObjectURL(currentFile);
+    document.getElementById("necklacePreview").innerHTML = `<img src="${url}" />`;
+  }
+});
+
+async function handleGenerate() {
+  if (!currentFile) {
+    setStatus("Choose a necklace image first.");
+    return;
+  }
+  const btn = document.getElementById("generateBtn");
+  btn.disabled = true;
+  setStatus("Generating... this can take 10-20 seconds.");
+
+  const formData = new FormData();
+  formData.append("file", currentFile);
+
+  try {
+    const res = await fetch(`${API_BASE}/generate`, { method: "POST", body: formData });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    currentResultUrl = data.image_url;
+    document.getElementById("resultPreview").innerHTML = `<img src="${API_BASE}${currentResultUrl}" />`;
+    document.getElementById("editSection").style.display = "block";
+    setStatus("Done.");
+  } catch (e) {
+    setStatus("Error: " + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function handleEdit() {
+  const instruction = document.getElementById("instructionInput").value.trim();
+  if (!instruction) {
+    setStatus("Enter an edit instruction, or pick a preset.");
+    return;
+  }
+  if (!currentResultUrl) {
+    setStatus("Generate an image first.");
+    return;
+  }
+
+  const btn = document.getElementById("editBtn");
+  btn.disabled = true;
+  setStatus("Applying edit...");
+
+  try {
+    // Fetch the current result image as a blob so we can re-send it as the
+    // edit source (keeps the backend stateless — no server-side sessions).
+    const imgRes = await fetch(`${API_BASE}${currentResultUrl}`);
+    const blob = await imgRes.blob();
+
+    const formData = new FormData();
+    formData.append("file", blob, "current.png");
+    formData.append("instruction", instruction);
+
+    const res = await fetch(`${API_BASE}/edit`, { method: "POST", body: formData });
+    if (!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    currentResultUrl = data.image_url;
+    document.getElementById("resultPreview").innerHTML = `<img src="${API_BASE}${currentResultUrl}" />`;
+    setStatus("Done.");
+  } catch (e) {
+    setStatus("Error: " + e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
+
+</body>
+</html>

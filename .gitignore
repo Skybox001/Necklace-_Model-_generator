@@ -1,0 +1,6 @@
+__pycache__/
+generated/*.png
+generated/*.jpg
+generated/*.jpeg
+.env
+.DS_Store

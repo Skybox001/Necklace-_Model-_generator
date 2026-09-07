@@ -9,7 +9,7 @@ else consistent.
 
 **Pollinations.ai's `kontext` model** (FLUX Kontext under the hood),
 via their free HTTP image API. Free API key from
-https://auth.pollinations.ai, no credit card required.
+https://enter.pollinations.ai/keys, no credit card required.
 
 ### The path to get here (and why it matters for evaluation)
 
@@ -115,7 +115,7 @@ necklace_model_generator/
 pip install -r requirements.txt
 ```
 
-Get a free API key from https://auth.pollinations.ai, then set it as an
+Get a free API key from https://enter.pollinations.ai/keys, then set it as an
 environment variable (never commit it to source control):
 
 ```bash

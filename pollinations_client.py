@@ -29,7 +29,7 @@ publicly reachable (e.g. Render) — it will not work against
 http://127.0.0.1 during local development, since Pollinations' servers
 can't reach your machine's localhost.
 
-Get a free API key at https://auth.pollinations.ai (no credit card).
+Get a free API key at https://enter.pollinations.ai/keys (no credit card).
 Set it as POLLINATIONS_API_KEY in the environment.
 """
 
@@ -38,7 +38,7 @@ import urllib.parse
 
 import requests
 
-BASE_URL = "https://image.pollinations.ai/prompt"
+BASE_URL = "https://gen.pollinations.ai/image"
 MODEL_NAME = "kontext"
 
 
@@ -47,8 +47,8 @@ def _get_api_key() -> str:
     if not api_key:
         raise RuntimeError(
             "POLLINATIONS_API_KEY is not set. Get a free key at "
-            "https://auth.pollinations.ai and set it as an environment "
-            "variable."
+            "https://enter.pollinations.ai/keys and set it as an "
+            "environment variable."
         )
     return api_key
 
@@ -79,9 +79,9 @@ def _call_pollinations(image_url: str, prompt: str) -> bytes:
         "width": 1024,
         "height": 1024,
         "nologo": "true",
-        "key": api_key,
     }
-    response = requests.get(url, params=params, timeout=120)
+    headers = {"Authorization": f"Bearer {api_key}"}
+    response = requests.get(url, params=params, headers=headers, timeout=120)
     if response.status_code != 200:
         raise RuntimeError(
             f"Pollinations API error ({response.status_code}): {response.text[:500]}"

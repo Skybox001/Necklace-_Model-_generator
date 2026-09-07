@@ -81,7 +81,7 @@ def _call_pollinations(image_url: str, prompt: str) -> bytes:
         "nologo": "true",
     }
     headers = {"Authorization": f"Bearer {api_key}"}
-    response = requests.get(url, params=params, headers=headers, timeout=120)
+    response = requests.get(url, params=params, headers=headers, timeout=180)
     if response.status_code != 200:
         raise RuntimeError(
             f"Pollinations API error ({response.status_code}): {response.text[:500]}"

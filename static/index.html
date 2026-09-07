@@ -99,6 +99,23 @@ function setStatus(msg) {
   document.getElementById("status").innerText = msg;
 }
 
+function showError(msg) {
+  if (/balance|pollen/i.test(msg)) {
+    setStatus("Image generation is unavailable: this app's AI credits (Pollen) are used up. Add more at enter.pollinations.ai to keep generating. Details: " + msg);
+  } else {
+    setStatus("Error: " + msg);
+  }
+}
+
+async function parseError(res) {
+  const text = await res.text();
+  try {
+    const json = JSON.parse(text);
+    if (json.detail) return String(json.detail);
+  } catch (e) {}
+  return text;
+}
+
 function setInstruction(text) {
   document.getElementById("instructionInput").value = text;
 }
@@ -125,14 +142,14 @@ async function handleGenerate() {
 
   try {
     const res = await fetch(`${API_BASE}/generate`, { method: "POST", body: formData });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) throw new Error(await parseError(res));
     const data = await res.json();
     currentResultUrl = data.image_url;
     document.getElementById("resultPreview").innerHTML = `<img src="${API_BASE}${currentResultUrl}" />`;
     document.getElementById("editSection").style.display = "block";
     setStatus("Done.");
   } catch (e) {
-    setStatus("Error: " + e.message);
+    showError(e.message);
   } finally {
     btn.disabled = false;
   }
@@ -164,13 +181,13 @@ async function handleEdit() {
     formData.append("instruction", instruction);
 
     const res = await fetch(`${API_BASE}/edit`, { method: "POST", body: formData });
-    if (!res.ok) throw new Error(await res.text());
+    if (!res.ok) throw new Error(await parseError(res));
     const data = await res.json();
     currentResultUrl = data.image_url;
     document.getElementById("resultPreview").innerHTML = `<img src="${API_BASE}${currentResultUrl}" />`;
     setStatus("Done.");
   } catch (e) {
-    setStatus("Error: " + e.message);
+    showError(e.message);
   } finally {
     btn.disabled = false;
   }

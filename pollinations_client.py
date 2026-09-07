@@ -69,6 +69,9 @@ GENERATE_PROMPT = (
 )
 
 
+REQUEST_TIMEOUT = 300
+
+
 def _call_pollinations(image_url: str, prompt: str) -> bytes:
     api_key = _get_api_key()
     encoded_prompt = urllib.parse.quote(prompt)
@@ -81,14 +84,29 @@ def _call_pollinations(image_url: str, prompt: str) -> bytes:
         "nologo": "true",
     }
     headers = {"Authorization": f"Bearer {api_key}"}
-    response = requests.get(url, params=params, headers=headers, timeout=180)
-    if response.status_code != 200:
+    try:
+        response = requests.get(url, params=params, headers=headers, timeout=REQUEST_TIMEOUT)
+    except requests.exceptions.Timeout:
         raise RuntimeError(
-            f"Pollinations API error ({response.status_code}): {response.text[:500]}"
+            f"Pollinations did not respond within {REQUEST_TIMEOUT} seconds "
+            "— their generation queue may be overloaded. Please try again "
+            "in a minute or two."
+        )
+    except requests.exceptions.RequestException as e:
+        raise RuntimeError(f"Could not reach Pollinations: {type(e).__name__}: {e}")
+    if response.status_code != 200:
+        detail = response.text[:500]
+        if response.status_code == 402:
+            detail = (
+                "Your Pollinations pollen balance is empty (each image costs "
+                "0.03 pollen). Earn free pollen via Quests or add pollen at "
+                f"https://enter.pollinations.ai. Server said: {detail}"
+            )
+        raise RuntimeError(
+            f"Pollinations API error ({response.status_code}): {detail}"
         )
     content_type = response.headers.get("content-type", "")
     if "image" not in content_type:
-        # Pollinations returns JSON on error even with a 200 sometimes.
         raise RuntimeError(f"Pollinations did not return an image: {response.text[:500]}")
     return response.content
 
